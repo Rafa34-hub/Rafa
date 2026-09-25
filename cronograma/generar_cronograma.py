@@ -251,6 +251,9 @@ for row in wc.iter_rows(values_only=True):
         elif section == "V":
             vacations.add(vals[0].date())
 
+# Festa Nacional d'Espanya: no consta al calendari laboral però és festiu
+holidays.setdefault(dt.date(2027, 10, 12), "Festa Nacional d'Espanya (Nacional)")
+
 TEMPLATE_HR = blocks[(2027, 7)]  # JULIOL 2027 com a plantilla de format
 TITLE_SRC = {9: blocks[(2026, 9)] - 1, 10: blocks[(2026, 10)] - 1,
              11: blocks[(2026, 11)] - 1, 12: blocks[(2026, 12)] - 1}
@@ -361,7 +364,7 @@ for note in [
     "Coaching I → II, Català A1 → A2.1 i mòduls IMPE0110) es programen en ordre.",
     "No s'ha tocat cap cel·la ja ocupada del cronograma ni les aules de TARRAGONA / ON LINE.",
     "Setembre-desembre 2027: festius i vacances del CALENDARI_LABORAL_2027 (els festius locals 04/09 i "
-    "15/09 hi consten com 'a omplir'; el 12/10 no hi apareix com a festiu).",
+    "15/09 hi consten com 'a omplir'). S'hi afegeix el 12/10 com a festiu.",
 ]:
     ps.append(["• " + note])
     ps.cell(ps.max_row, 1).font = Font(name="Arial", size=9)
