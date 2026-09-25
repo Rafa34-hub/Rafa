@@ -61,6 +61,13 @@ for r in list(range(4, 20)) + list(range(49, 53)):
     for ed in range(1, n_ed + 1):
         courses.append(dict(row=r, code=code, name=name.replace("_x0019_ ", "'").replace("_x0019_", "'").replace("\x19", "'"), hours=int(hours),
                             teacher=str(teacher).strip(), ed=ed, n_ed=n_ed))
+# Hores facilitades per l'usuari (no consten al fitxer d'origen)
+EXTRA_HOURS = {"ADGG0208": 678, "FCOS02": 30, "CTRH0011": 10, "CTRHI0015": 10}
+for r, prog in ((21, "CFCC"), (22, "CFCC"), (24, "FORMA I CONTRACTE"), (25, "FORMA I CONTRACTE"),
+                (26, "FORMA I CONTRACTE"), (27, "FORMA I CONTRACTE")):
+    code = wf[f"D{r}"].value
+    courses.append(dict(row=r, code=code, name=f"{wf[f'E{r}'].value} [{prog} - {wf[f'V{r}'].value}]",
+                        hours=EXTRA_HOURS[code], teacher="PER ASSIGNAR", ed=1, n_ed=1))
 byrow = {}
 for c in courses:
     byrow.setdefault((c["row"], c["ed"]), c)
@@ -68,6 +75,14 @@ for c in courses:
 # Ordre de programació, data objectiu, torn preferent i dependències
 # (fila origen, edició, data mínima, torn preferent, depèn de)
 PLAN = [
+    # CFCC (treballadors): FCOS02 i després ADGG0208 (678 h)
+    (22, 1, dt.date(2026, 10, 19), "tarda", None),
+    (21, 1, dt.date(2026, 10, 19), "tarda", (22, 1)),
+    # FORMA I CONTRACTE (aturats): mòduls complementaris i després ADGG0208 (678 h)
+    (25, 1, dt.date(2026, 10, 19), "matí", None),
+    (26, 1, dt.date(2026, 10, 19), "matí", (25, 1)),
+    (27, 1, dt.date(2026, 10, 19), "matí", (26, 1)),
+    (24, 1, dt.date(2026, 10, 19), "matí", (27, 1)),
     # MARIA: matins lliures, tardes només 1 formació/mes -> sempre matí
     (8, 1, dt.date(2026, 11, 2), "matí", None),    # ACTIC bàsic comunicació
     (10, 1, dt.date(2026, 11, 23), "matí", None),  # ACTIC bàsic continguts
@@ -361,8 +376,8 @@ for cidx in (10, 11, 12):
 ps.append([])
 ps.append(["Notes:"])
 for note in [
-    "Formacions sense hores al fitxer d'origen (ADGG0208, FCOS02, CTRH0011, CTRHI0015, FCOI25 i blocs "
-    "Forma i Contracte) no s'han programat: cal indicar-ne les hores.",
+    "Hores d'ADGG0208 (678), FCOS02 (30), CTRH0011 (10) i CTRHI0015 (10) facilitades per l'usuari. "
+    "FCOI25 i els codis de les files 31-43 no tenen hores i no s'han programat.",
     "MARIA: només matins (disponibilitat 'Matins lliure // Tardes: 1 formació per mes'). S'han evitat "
     "els dies en què ja fa 'IA MARIA' a GOOGLE MATINS (set.-oct. 2026).",
     "Un docent no té mai dues formacions el mateix dia. Els nivells (bàsic → intermedi → avançat, "
