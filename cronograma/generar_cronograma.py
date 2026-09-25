@@ -253,6 +253,11 @@ for row in wc.iter_rows(values_only=True):
 
 # Festa Nacional d'Espanya: no consta al calendari laboral però és festiu
 holidays.setdefault(dt.date(2027, 10, 12), "Festa Nacional d'Espanya (Nacional)")
+# Festius locals 04/09 i 15/09: laborables per al centre, a canvi del 25/06 i el 07/12
+holidays.pop(dt.date(2027, 9, 4), None)
+holidays.pop(dt.date(2027, 9, 15), None)
+holidays.setdefault(dt.date(2027, 6, 25), "Festiu local (canvi pel 04/09)")
+holidays.setdefault(dt.date(2027, 12, 7), "Festiu local (canvi pel 15/09)")
 
 TEMPLATE_HR = blocks[(2027, 7)]  # JULIOL 2027 com a plantilla de format
 TITLE_SRC = {9: blocks[(2026, 9)] - 1, 10: blocks[(2026, 10)] - 1,
