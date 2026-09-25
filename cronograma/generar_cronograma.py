@@ -68,6 +68,10 @@ for r, prog in ((21, "CFCC"), (22, "CFCC"), (24, "FORMA I CONTRACTE"), (25, "FOR
     code = wf[f"D{r}"].value
     courses.append(dict(row=r, code=code, name=f"{wf[f'E{r}'].value} [{prog} - {wf[f'V{r}'].value}]",
                         hours=EXTRA_HOURS[code], teacher="PER ASSIGNAR", ed=1, n_ed=1))
+# FCOI25 (fila 28): codi a la columna E, nom a la F i hores (40) facilitades per l'usuari
+courses.append(dict(row=28, code=wf["E28"].value,
+                    name=wf["F28"].value.replace(" (40 h)", "") + " [FORMA I CONTRACTE - ATURATS]",
+                    hours=40, teacher="PER ASSIGNAR", ed=1, n_ed=1))
 byrow = {}
 for c in courses:
     byrow.setdefault((c["row"], c["ed"]), c)
@@ -82,7 +86,8 @@ PLAN = [
     (25, 1, dt.date(2026, 10, 19), "matí", None),
     (26, 1, dt.date(2026, 10, 19), "matí", (25, 1)),
     (27, 1, dt.date(2026, 10, 19), "matí", (26, 1)),
-    (24, 1, dt.date(2026, 10, 19), "matí", (27, 1)),
+    (28, 1, dt.date(2026, 10, 19), "matí", (27, 1)),
+    (24, 1, dt.date(2026, 10, 19), "matí", (28, 1)),
     # MARIA: matins lliures, tardes només 1 formació/mes -> sempre matí
     (8, 1, dt.date(2026, 11, 2), "matí", None),    # ACTIC bàsic comunicació
     (10, 1, dt.date(2026, 11, 23), "matí", None),  # ACTIC bàsic continguts
@@ -377,7 +382,7 @@ ps.append([])
 ps.append(["Notes:"])
 for note in [
     "Hores d'ADGG0208 (678), FCOS02 (30), CTRH0011 (10) i CTRHI0015 (10) facilitades per l'usuari. "
-    "FCOI25 i els codis de les files 31-43 no tenen hores i no s'han programat.",
+    "FCOI25 (40 h) es programa dins de Forma i Contracte. Els codis de les files 31-43 no tenen hores i no s'han programat.",
     "MARIA: només matins (disponibilitat 'Matins lliure // Tardes: 1 formació per mes'). S'han evitat "
     "els dies en què ja fa 'IA MARIA' a GOOGLE MATINS (set.-oct. 2026).",
     "Un docent no té mai dues formacions el mateix dia. Els nivells (bàsic → intermedi → avançat, "
