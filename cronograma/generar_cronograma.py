@@ -37,6 +37,8 @@ ROOMS = {  # (aula, torn) -> offset respecte la fila de capçalera
     ("GOOGLE", "matí"): 1, ("FIREFOX", "matí"): 2, ("COPILOT", "matí"): 3,
     ("GOOGLE", "tarda"): 4, ("FIREFOX", "tarda"): 5, ("COPILOT", "tarda"): 6,
 }
+CAL_MONTHS = {"GENER": 1, "FEBRER": 2, "MARÇ": 3, "ABRIL": 4, "MAIG": 5, "JUNY": 6, "JULIOL": 7,
+              "AGOST": 8, "SETEMBRE": 9, "OCTUBRE": 10, "NOVEMBRE": 11, "DESEMBRE": 12}
 START = dt.date(2026, 10, 13)   # primer dia planificable (després de l'actualització del 23/09)
 END = dt.date(2027, 7, 30)      # últim dia planificable (agost = vacances)
 
@@ -254,30 +256,47 @@ for key, s in scheduled.items():
         legend_next_col[r] = col + 9
 
 # ---------------------------------------------------------------- SET-DES 2027
-wc = openpyxl.load_workbook(F_CAL, data_only=True)["Parametres"]
-holidays, vacations = {}, set()
-section = None
-for row in wc.iter_rows(values_only=True):
+# Es llegeix la graella acolorida del full 'Calendari 2027' (inclou els canvis del centre:
+# 12/10 festiu, 04/09 i 15/09 laborables a canvi del 25/06 i 07/12, vacances de Nadal)
+wc = openpyxl.load_workbook(F_CAL, data_only=True)["Calendari 2027"]
+legend = {}
+for r in range(30, wc.max_row + 1):
+    txt = wc.cell(r, 4).value
+    if isinstance(txt, str) and txt.strip():
+        legend[kind(wc.cell(r, 3))] = txt.strip()
+holidays, vacations, month_days = {}, set(), {}
+for r in range(1, wc.max_row + 1):
+    for c0 in range(1, wc.max_column + 1):
+        name = wc.cell(r, c0).value
+        if not (isinstance(name, str) and name.strip() in CAL_MONTHS):
+            continue
+        m = CAL_MONTHS[name.strip()]
+        month_days[m] = wc.cell(r + 1, c0 + 6).value  # dies laborables del mes
+        for rr in range(r + 3, r + 9):
+            for cc in range(c0, c0 + 7):
+                v = wc.cell(rr, cc).value
+                if not isinstance(v, int):
+                    continue
+                d, what = dt.date(2027, m, v), legend.get(kind(wc.cell(rr, cc)), "")
+                if what.lower().startswith("festiu") and not what.lower().startswith("festiu local"):
+                    holidays[d] = what if what != "Festiu" else "Festiu"
+                elif what.lower().startswith("vacances") or (m == 8 and kind(wc.cell(rr, cc)) not in
+                                                               (None, "FFFFFF00", "FFD9D9D9")):
+                    vacations.add(d)
+# Noms dels festius (full Parametres) per a la llegenda del cronograma
+names = {}
+for row in openpyxl.load_workbook(F_CAL, data_only=True)["Parametres"].iter_rows(values_only=True):
     vals = [v for v in row if v is not None]
-    if not vals:
-        continue
-    if isinstance(vals[0], str) and vals[0].startswith("FESTIUS"):
-        section = "F"
-    elif isinstance(vals[0], str) and vals[0].startswith("VACANCES"):
-        section = "V"
-    elif isinstance(vals[0], dt.datetime):
-        if section == "F":
-            holidays[vals[0].date()] = f"{vals[1]} ({vals[2]})"
-        elif section == "V":
-            vacations.add(vals[0].date())
+    if len(vals) >= 3 and isinstance(vals[0], dt.datetime):
+        names[vals[0].date()] = f"{vals[1]} ({vals[2]})"
+names[dt.date(2027, 10, 12)] = "Festa Nacional d'Espanya (Nacional)"
+for d in holidays:
+    holidays[d] = names.get(d, holidays[d]) if "Multimèdia" not in holidays[d] else "Festiu Multimèdia"
 
-# Festa Nacional d'Espanya: no consta al calendari laboral però és festiu
-holidays.setdefault(dt.date(2027, 10, 12), "Festa Nacional d'Espanya (Nacional)")
-# Festius locals 04/09 i 15/09: laborables per al centre, a canvi del 25/06 i el 07/12
-holidays.pop(dt.date(2027, 9, 4), None)
-holidays.pop(dt.date(2027, 9, 15), None)
-holidays.setdefault(dt.date(2027, 6, 25), "Festiu local (canvi pel 04/09)")
-holidays.setdefault(dt.date(2027, 12, 7), "Festiu local (canvi pel 15/09)")
+# Dies laborables de cada mes de 2027 (número petit sota el nom del mes al calendari)
+for (y, m), hr in blocks.items():
+    if y == 2027 and m in month_days:
+        ws.cell(hr - 1, 35).value = month_days[m]
 
 TEMPLATE_HR = blocks[(2027, 7)]  # JULIOL 2027 com a plantilla de format
 TITLE_SRC = {9: blocks[(2026, 9)] - 1, 10: blocks[(2026, 10)] - 1,
@@ -325,6 +344,7 @@ for i, m in enumerate((9, 10, 11, 12)):
             worked += 1
         for rr in room_rows:
             ws.cell(rr, col).fill = f
+    assert worked == month_days[m], (m, worked, month_days[m])
     ws.cell(t, 35).value = worked
     notes = [f"{d:%d/%m} {n}" for d, n in sorted(holidays.items()) if d.month == m]
     vac = sorted(d for d in vacations if d.month == m and d.weekday() < 5 and d not in holidays)
@@ -388,8 +408,9 @@ for note in [
     "Un docent no té mai dues formacions el mateix dia. Els nivells (bàsic → intermedi → avançat, "
     "Coaching I → II, Català A1 → A2.1 i mòduls IMPE0110) es programen en ordre.",
     "No s'ha tocat cap cel·la ja ocupada del cronograma ni les aules de TARRAGONA / ON LINE.",
-    "Setembre-desembre 2027: festius i vacances del CALENDARI_LABORAL_2027 (els festius locals 04/09 i "
-    "15/09 hi consten com 'a omplir'). S'hi afegeix el 12/10 com a festiu.",
+    "2027: festius, vacances i dies laborables segons la graella 'Calendari 2027' del CALENDARI_LABORAL_2027 "
+    "corregit (12/10 festiu; 04/09 i 15/09 laborables a canvi del 25/06 i 07/12, festius Multimèdia; "
+    "vacances de Nadal 24-31/12).",
 ]:
     ps.append(["• " + note])
     ps.cell(ps.max_row, 1).font = Font(name="Arial", size=9)
